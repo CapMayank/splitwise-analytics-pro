@@ -328,14 +328,14 @@ export default function Dashboard() {
                         paddingAngle={4}
                         dataKey="value"
                         stroke="none"
-                        label={({ name, percent }) => `${name.substring(0, 10)} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }: any) => `${name?.substring(0, 10)} ${(percent * 100).toFixed(0)}%`}
                         >
                         {categoryData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                         </Pie>
                         <Tooltip 
-                        formatter={(value: number) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+                        formatter={(value: any) => `₹${Number(value).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
                         contentStyle={{ backgroundColor: 'rgba(30, 30, 30, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                         itemStyle={{ color: '#fff' }}
                         />
@@ -362,7 +362,7 @@ export default function Dashboard() {
                         <XAxis dataKey="name" stroke="#a1a1a6" tick={{fontSize: 12}} minTickGap={30} />
                         <YAxis stroke="#a1a1a6" tick={{fontSize: 12}} tickFormatter={(v) => `₹${v/1000}k`} />
                         <Tooltip 
-                        formatter={(value: number) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+                        formatter={(value: any) => `₹${Number(value).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
                         labelFormatter={(label) => `Date: ${label}`}
                         contentStyle={{ backgroundColor: 'rgba(30, 30, 30, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                         />
@@ -386,7 +386,7 @@ export default function Dashboard() {
                         <XAxis dataKey="name" stroke="#a1a1a6" tick={{fontSize: 12}} />
                         <YAxis stroke="#a1a1a6" tick={{fontSize: 12}} tickFormatter={(v) => `₹${v/1000}k`} />
                         <Tooltip 
-                        formatter={(value: number) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+                        formatter={(value: any) => `₹${Number(value).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
                         contentStyle={{ backgroundColor: 'rgba(30, 30, 30, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                         cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                         />
@@ -408,7 +408,7 @@ export default function Dashboard() {
                             <XAxis type="number" stroke="#a1a1a6" tick={{fontSize: 12}} />
                             <YAxis dataKey="name" type="category" stroke="#a1a1a6" width={70} tick={{fontSize: 12}} />
                             <Tooltip 
-                            formatter={(value: number) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+                            formatter={(value: any) => `₹${Number(value).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
                             contentStyle={{ backgroundColor: 'rgba(30, 30, 30, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                             cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                             />
@@ -482,7 +482,7 @@ export default function Dashboard() {
                                 <XAxis dataKey="day" stroke="#a1a1a6" tick={{fontSize: 12}} />
                                 <YAxis stroke="#a1a1a6" tick={{fontSize: 12}} tickFormatter={(v) => `₹${v/1000}k`} />
                                 <Tooltip 
-                                    formatter={(value: number) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+                                    formatter={(value: any) => `₹${Number(value).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
                                     contentStyle={{ backgroundColor: 'rgba(30, 30, 30, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                 />
@@ -514,14 +514,14 @@ export default function Dashboard() {
                                 paddingAngle={4}
                                 dataKey="value"
                                 stroke="none"
-                                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                label={({ name, percent }: any) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                             >
                             {sizeDistribution.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
                             ))}
                             </Pie>
                             <Tooltip 
-                                formatter={(value: number) => `${value} transactions`}
+                        formatter={(value: any) => `${value} transactions`}
                                 contentStyle={{ backgroundColor: 'rgba(30, 30, 30, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                                 itemStyle={{ color: '#fff' }}
                             />
