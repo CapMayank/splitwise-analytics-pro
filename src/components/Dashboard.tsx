@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import Papa from 'papaparse';
-import { UploadCloud, PieChart as PieChartIcon, BarChart as BarChartIcon, User, Calendar, TrendingUp, AlertCircle, Clock, LayoutDashboard, Lightbulb } from 'lucide-react';
+import { UploadCloud, PieChart as PieChartIcon, BarChart as BarChartIcon, User, Calendar, TrendingUp, AlertCircle, Clock, LayoutDashboard, Lightbulb, RefreshCw } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine,
@@ -28,6 +28,34 @@ export default function Dashboard() {
   const [selectedUser, setSelectedUser] = useState<string>('All');
   const [selectedMonth, setSelectedMonth] = useState<string>('All');
   const [activeTab, setActiveTab] = useState<'overview' | 'insights'>('overview');
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleApiSync = async () => {
+    const token = window.prompt("Paste your Splitwise Web Session Cookie or Bearer Token:\n(You can find this in your Browser Developer Tools under Network -> Request Headers)");
+    if (!token) return;
+
+    setIsSyncing(true);
+    try {
+      const res = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+      
+      const result = await res.json();
+      if (!res.ok) {
+        alert("Failed to sync: " + result.error);
+        return;
+      }
+      
+      setUsers(result.users);
+      setData(result.data.sort((a: any, b: any) => new Date(a.Date).getTime() - new Date(b.Date).getTime()));
+    } catch (err: any) {
+      alert("Error connecting to API: " + err.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -222,8 +250,14 @@ export default function Dashboard() {
         <h2 style={{ fontSize: '24px' }}>Upload Splitwise Export</h2>
         <p className="text-secondary">Select your .csv file to generate your premium dashboard</p>
         <div className="file-input-wrapper mt-4">
-          <button className="btn">Select File</button>
+          <button className="btn" style={{ marginRight: '1rem' }}>Select CSV File</button>
           <input type="file" accept=".csv" onChange={handleFileUpload} />
+        </div>
+        <div className="mt-4">
+          <button className="btn" onClick={handleApiSync} disabled={isSyncing} style={{ background: 'rgba(50,215,75,0.2)', border: '1px solid var(--positive)', color: 'var(--positive)' }}>
+            <RefreshCw size={16} className={isSyncing ? "animate-spin" : ""} /> 
+            {isSyncing ? "Syncing..." : "Sync Live via Session Token"}
+          </button>
         </div>
       </div>
     );
@@ -273,9 +307,12 @@ export default function Dashboard() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button className="btn" onClick={handleApiSync} disabled={isSyncing} style={{ padding: '8px 16px', fontSize: '13px', background: 'rgba(50,215,75,0.15)', borderColor: 'var(--positive)', color: 'var(--positive)' }}>
+            <RefreshCw size={16} className={isSyncing ? "animate-spin" : ""} /> {isSyncing ? "Syncing..." : "Live Sync"}
+          </button>
           <div className="file-input-wrapper" style={{ display: 'inline-block' }}>
             <button className="btn" style={{ padding: '8px 16px', fontSize: '13px' }}>
-              <UploadCloud size={16} /> New
+              <UploadCloud size={16} /> New CSV
             </button>
             <input type="file" accept=".csv" onChange={handleFileUpload} />
           </div>
