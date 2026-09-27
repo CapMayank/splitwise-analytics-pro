@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import Papa from 'papaparse';
-import { UploadCloud, PieChart as PieChartIcon, BarChart as BarChartIcon, User, Users, Calendar, TrendingUp, AlertCircle, Clock, LayoutDashboard, Lightbulb, RefreshCw, Sparkles, Repeat } from 'lucide-react';
+import { UploadCloud, PieChart as PieChartIcon, BarChart as BarChartIcon, User, Users, Calendar, TrendingUp, AlertCircle, Clock, LayoutDashboard, Lightbulb, RefreshCw, Sparkles, Repeat, Search, DollarSign } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine,
@@ -225,6 +225,7 @@ export default function Dashboard() {
   const [selectedUser, setSelectedUser] = useState<string>('All');
   const [selectedMonth, setSelectedMonth] = useState<string>('All');
   const [selectedGroup, setSelectedGroup] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   
   // Drill-down filters
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -384,9 +385,16 @@ export default function Dashboard() {
       }
 
       const isNotPayment = d.Category !== 'Payment';
-      return monthMatch && userMatch && groupMatch && categoryMatch && dayMatch && sizeMatch && isNotPayment;
+      
+      let searchMatch = true;
+      if (searchQuery.trim() !== '') {
+          searchMatch = d.Description.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        d.Category.toLowerCase().includes(searchQuery.toLowerCase());
+      }
+      
+      return monthMatch && userMatch && groupMatch && categoryMatch && dayMatch && sizeMatch && isNotPayment && searchMatch;
     });
-  }, [data, selectedMonth, selectedUser, selectedGroup, selectedCategory, selectedDay, selectedSize]);
+  }, [data, selectedMonth, selectedUser, selectedGroup, selectedCategory, selectedDay, selectedSize, searchQuery]);
 
   // 1. Category Data
   const categoryData = useMemo(() => {
@@ -431,6 +439,47 @@ export default function Dashboard() {
       return { name: u.split(' ')[0], NetBalance: net };
     }).filter(u => u.NetBalance !== 0);
   }, [data, dynamicUsers, selectedMonth, selectedGroup]);
+
+  // 4b. Debt Settlement Optimizer
+  const settlementPlan = useMemo(() => {
+    if (selectedUser !== 'All') return [];
+    
+    // Deep copy balances 
+    const balances = userBalances.map(u => ({ ...u }));
+    const debtors = balances.filter(u => u.NetBalance < -0.01).sort((a, b) => a.NetBalance - b.NetBalance);
+    const creditors = balances.filter(u => u.NetBalance > 0.01).sort((a, b) => b.NetBalance - a.NetBalance);
+    
+    const transfers: { from: string, to: string, amount: number }[] = [];
+    
+    let i = 0;
+    let j = 0;
+    
+    while (i < debtors.length && j < creditors.length) {
+      const debtor = debtors[i];
+      const creditor = creditors[j];
+      
+      const debt = Math.abs(debtor.NetBalance);
+      const credit = creditor.NetBalance;
+      
+      const settledAmount = Math.min(debt, credit);
+      
+      if (settledAmount > 0.01) {
+          transfers.push({
+            from: debtor.name,
+            to: creditor.name,
+            amount: settledAmount
+          });
+      }
+      
+      debtor.NetBalance += settledAmount;
+      creditor.NetBalance -= settledAmount;
+      
+      if (Math.abs(debtor.NetBalance) < 0.01) i++;
+      if (Math.abs(creditor.NetBalance) < 0.01) j++;
+    }
+    
+    return transfers;
+  }, [userBalances, selectedUser]);
 
   // 5. Day of Week Analysis
   const dayOfWeekData = useMemo(() => {
@@ -643,6 +692,16 @@ export default function Dashboard() {
               </select>
             </div>
           )}
+          <div className="flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Search size={16} className="text-secondary"/>
+            <input 
+              type="text" 
+              placeholder="Search anything..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{ background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '14px', width: '150px' }}
+            />
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -978,6 +1037,40 @@ export default function Dashboard() {
                     </div>
                 </div>
 
+                {/* Optimal Settlement Plan */}
+                <div className="glass-panel" style={{ background: 'rgba(50, 215, 75, 0.05)', borderColor: 'rgba(50, 215, 75, 0.2)' }}>
+                    <div className="flex items-center gap-2 mb-4">
+                        <DollarSign color="var(--positive)" size={20} />
+                        <h3 style={{ fontSize: '18px', color: 'var(--positive)' }}>Optimal Settlement Plan</h3>
+                    </div>
+                    <div className="flex flex-col gap-3" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                        {selectedUser !== 'All' ? (
+                            <div className="text-secondary" style={{ textAlign: 'center', marginTop: '2rem' }}>
+                                Please select "All Users" to view the group settlement plan.
+                            </div>
+                        ) : settlementPlan.length === 0 ? (
+                            <div className="text-secondary" style={{ textAlign: 'center', marginTop: '2rem' }}>
+                                All debts are settled!
+                            </div>
+                        ) : (
+                            settlementPlan.map((transfer, idx) => (
+                                <div key={idx} className="flex justify-between items-center" style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px' }}>
+                                    <div className="flex items-center gap-2">
+                                        <span style={{ fontWeight: 600 }}>{transfer.from}</span>
+                                        <span style={{ color: 'var(--text-secondary)' }}>pays</span>
+                                        <span style={{ fontWeight: 600 }}>{transfer.to}</span>
+                                    </div>
+                                    <div style={{ color: 'var(--positive)', fontWeight: 'bold' }}>
+                                        ₹{transfer.amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 animate-in delay-3 mt-6">
                 {/* Transaction Size Distribution */}
                 <div className="glass-panel">
                     <div className="flex items-center gap-2 mb-4">
