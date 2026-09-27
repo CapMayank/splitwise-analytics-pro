@@ -59,15 +59,47 @@ function getCanonicalName(name: string, existingNames: string[], threshold = 2):
     return cleanName;
 }
 
+const CATEGORY_MAP: Record<string, string[]> = {
+  "Groceries": ["ghee", "milk", "veggies", "vegetable", "grocery", "fruit", "bread", "egg", "butter", "cheese", "meat", "chicken", "mart", "supermarket", "dmart", "reliance fresh", "blinkit", "zepto", "instamart", "swiggy instamart", "bigbasket"],
+  "Dining Out": ["zomato", "swiggy", "restaurant", "cafe", "dinner", "lunch", "breakfast", "pizza", "burger", "coffee", "starbucks", "mcdonalds", "kfc", "subway", "dominos", "food"],
+  "Transportation": ["uber", "ola", "rapido", "cab", "auto", "petrol", "diesel", "fuel", "gas", "bus", "train", "flight", "ticket", "metro", "parking", "flight", "air"],
+  "Entertainment": ["movie", "cinema", "netflix", "prime", "amazon prime", "spotify", "apple music", "concert", "show", "game", "steam"],
+  "Utilities": ["electricity", "water", "gas bill", "internet", "wifi", "broadband", "jio", "airtel", "recharge", "mobile", "phone bill"],
+  "Rent": ["rent", "maintenance", "brokerage", "deposit"],
+  "Medical": ["doctor", "medicine", "pharmacy", "hospital", "clinic", "test", "apollo", "pharmeasy"],
+  "Shopping": ["amazon", "flipkart", "myntra", "ajio", "clothes", "shoes", "zara", "h&m", "ikea"],
+  "Travel": ["hotel", "airbnb", "make my trip", "mmt", "agoda", "booking.com", "goibibo", "trip"]
+};
+
+function smartCategorize(description: string, currentCategory: string): string {
+  const desc = description.toLowerCase();
+  
+  for (const [category, keywords] of Object.entries(CATEGORY_MAP)) {
+    for (const keyword of keywords) {
+      // Check if keyword is in the description (with boundaries to avoid partial matches)
+      const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+      if (regex.test(desc)) {
+        return category;
+      }
+    }
+  }
+  
+  // If "General" or similar uncategorized, at least return that
+  return currentCategory || "General";
+}
+
 const cleanData = (rawData: any[]) => {
     const knownCategories: string[] = [];
     const knownDescriptions: string[] = [];
     
-    return rawData.map(d => ({
-        ...d,
-        Category: getCanonicalName(d.Category, knownCategories, 2),
-        Description: getCanonicalName(d.Description, knownDescriptions, 2)
-    }));
+    return rawData.map(d => {
+        const smartCat = smartCategorize(d.Description, d.Category);
+        return {
+            ...d,
+            Category: getCanonicalName(smartCat, knownCategories, 2),
+            Description: getCanonicalName(d.Description, knownDescriptions, 2)
+        };
+    });
 };
 
 
