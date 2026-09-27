@@ -27,6 +27,22 @@ export async function POST(req: NextRequest) {
       headers['Authorization'] = `Bearer ${finalToken}`;
     }
 
+    // Fetch groups
+    const groupsResponse = await fetch('https://secure.splitwise.com/api/v3.0/get_groups', {
+      method: 'GET',
+      headers
+    });
+    
+    let groupsMap: Record<string, string> = {};
+    if (groupsResponse.ok) {
+      const groupsData = await groupsResponse.json();
+      if (groupsData.groups) {
+        groupsData.groups.forEach((g: any) => {
+          groupsMap[g.id] = g.name;
+        });
+      }
+    }
+
     // Fetch expenses
     const response = await fetch('https://secure.splitwise.com/api/v3.0/get_expenses?limit=1000', {
       method: 'GET',
@@ -49,6 +65,7 @@ export async function POST(req: NextRequest) {
     // Transform API response to match our CSV Transaction format
     const parsedData: any[] = [];
     const userNames = new Set<string>();
+    const groupNames = new Set<string>();
 
     data.expenses.forEach((exp: any) => {
         if (exp.deleted_at) return;
@@ -62,19 +79,24 @@ export async function POST(req: NextRequest) {
             userNames.add(name);
         });
 
+        const groupName = exp.group_id && groupsMap[exp.group_id] ? groupsMap[exp.group_id] : 'Non-Group Expenses';
+        groupNames.add(groupName);
+
         parsedData.push({
             Date: exp.date.split('T')[0], // YYYY-MM-DD
             Description: exp.description || 'Unknown',
             Category: exp.category?.name || 'General',
             Cost: parseFloat(exp.cost || '0'),
             Currency: exp.currency_code || 'INR',
+            Group: groupName,
             users: usersRecord
         });
     });
 
     return NextResponse.json({
         data: parsedData,
-        users: Array.from(userNames)
+        users: Array.from(userNames),
+        groups: Array.from(groupNames)
     });
 
   } catch (error: any) {

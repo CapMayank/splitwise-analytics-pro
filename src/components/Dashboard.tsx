@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import Papa from 'papaparse';
-import { UploadCloud, PieChart as PieChartIcon, BarChart as BarChartIcon, User, Calendar, TrendingUp, AlertCircle, Clock, LayoutDashboard, Lightbulb, RefreshCw } from 'lucide-react';
+import { UploadCloud, PieChart as PieChartIcon, BarChart as BarChartIcon, User, Users, Calendar, TrendingUp, AlertCircle, Clock, LayoutDashboard, Lightbulb, RefreshCw } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine,
@@ -15,6 +15,7 @@ type Transaction = {
   Category: string;
   Cost: number;
   Currency: string;
+  Group?: string;
   users: Record<string, number>;
 };
 
@@ -25,8 +26,10 @@ const DAY_COLORS = ['#FF9F0A', '#FF375F', '#BF5AF2', '#5E5CE6', '#0A84FF', '#32D
 export default function Dashboard() {
   const [data, setData] = useState<Transaction[]>([]);
   const [users, setUsers] = useState<string[]>([]);
+  const [groups, setGroups] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('All');
   const [selectedMonth, setSelectedMonth] = useState<string>('All');
+  const [selectedGroup, setSelectedGroup] = useState<string>('All');
   const [activeTab, setActiveTab] = useState<'overview' | 'insights'>('overview');
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -49,6 +52,7 @@ export default function Dashboard() {
       }
       
       setUsers(result.users);
+      if (result.groups) setGroups(result.groups);
       setData(result.data.sort((a: any, b: any) => new Date(a.Date).getTime() - new Date(b.Date).getTime()));
     } catch (err: any) {
       alert("Error connecting to API: " + err.message);
@@ -91,6 +95,8 @@ export default function Dashboard() {
         }
 
         setUsers(userList);
+        setGroups([]); // CSVs usually don't have multiple groups identified easily
+        setSelectedGroup('All');
         setData(parsedData.sort((a,b) => new Date(a.Date).getTime() - new Date(b.Date).getTime()));
       }
     });
@@ -120,10 +126,11 @@ export default function Dashboard() {
       if (selectedUser !== 'All') {
         userMatch = d.users[selectedUser] !== 0; 
       }
+      const groupMatch = selectedGroup === 'All' || d.Group === selectedGroup;
       const isNotPayment = d.Category !== 'Payment';
-      return monthMatch && userMatch && isNotPayment;
+      return monthMatch && userMatch && groupMatch && isNotPayment;
     });
-  }, [data, selectedMonth, selectedUser]);
+  }, [data, selectedMonth, selectedUser, selectedGroup]);
 
   // 1. Category Data
   const categoryData = useMemo(() => {
@@ -282,6 +289,15 @@ export default function Dashboard() {
               {months.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
+          {groups.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Users size={18} className="text-secondary"/>
+              <select value={selectedGroup} onChange={e => setSelectedGroup(e.target.value)}>
+                <option value="All">All Groups</option>
+                {groups.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Tab Navigation */}
