@@ -59,6 +59,57 @@ function getCanonicalName(name: string, existingNames: string[], threshold = 2):
     return cleanName;
 }
 
+class NaiveBayes {
+  classCounts: Record<string, number> = {};
+  wordCounts: Record<string, Record<string, number>> = {};
+  vocab: Set<string> = new Set();
+  totalDocs = 0;
+
+  tokenize(text: string): string[] {
+    return text.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(w => w.length > 1);
+  }
+
+  train(text: string, category: string) {
+    const tokens = this.tokenize(text);
+    if (tokens.length === 0) return;
+    
+    this.totalDocs++;
+    this.classCounts[category] = (this.classCounts[category] || 0) + 1;
+    if (!this.wordCounts[category]) this.wordCounts[category] = {};
+    
+    tokens.forEach(token => {
+      this.vocab.add(token);
+      this.wordCounts[category][token] = (this.wordCounts[category][token] || 0) + 1;
+    });
+  }
+
+  predict(text: string): string | null {
+    const tokens = this.tokenize(text);
+    if (tokens.length === 0 || this.totalDocs === 0) return null;
+
+    let bestClass: string | null = null;
+    let maxProb = -Infinity;
+
+    for (const category of Object.keys(this.classCounts)) {
+      let logProb = Math.log(this.classCounts[category] / this.totalDocs);
+      const wordCountForClass = Object.values(this.wordCounts[category] || {}).reduce((a, b) => a + b, 0);
+      const vocabSize = this.vocab.size;
+
+      tokens.forEach(token => {
+        const count = (this.wordCounts[category]?.[token] || 0) + 1;
+        logProb += Math.log(count / (wordCountForClass + vocabSize));
+      });
+
+      if (logProb > maxProb) {
+        maxProb = logProb;
+        bestClass = category;
+      }
+    }
+    return bestClass;
+  }
+}
+
+
 const CATEGORY_MAP: Record<string, string[]> = {
   "Groceries": [
       "ghee", "milk", "veggies", "vegetable", "grocery", "fruit", "bread", "egg", "butter", "cheese", "meat", "chicken", "mart", "supermarket", "dmart", "reliance fresh", "blinkit", "zepto", "instamart", "swiggy instamart", "bigbasket",
@@ -110,31 +161,40 @@ const CATEGORY_MAP: Record<string, string[]> = {
   "Education": [
       "school", "college", "tuition", "fee", "book", "notebook", "pen", "pencil", "stationery", "course", "udemy", "coursera", "edx", "class", "workshop", "seminar", "exam", "form", "admission", "byjus", "unacademy", "vedantu", "upgrad", "simplilearn"
   ]
+  // Remove the static function, we will do it dynamically in cleanData
 };
-
-function smartCategorize(description: string, currentCategory: string): string {
-  const desc = description.toLowerCase();
-  
-  for (const [category, keywords] of Object.entries(CATEGORY_MAP)) {
-    for (const keyword of keywords) {
-      // Check if keyword is in the description (with boundaries to avoid partial matches)
-      const regex = new RegExp(`\\b${keyword}\\b`, 'i');
-      if (regex.test(desc)) {
-        return category;
-      }
-    }
-  }
-  
-  // If "General" or similar uncategorized, at least return that
-  return currentCategory || "General";
-}
 
 const cleanData = (rawData: any[]) => {
     const knownCategories: string[] = [];
     const knownDescriptions: string[] = [];
     
+    const classifier = new NaiveBayes();
+    
+    // 1. Train model on our massive seed dictionary
+    for (const [category, keywords] of Object.entries(CATEGORY_MAP)) {
+      keywords.forEach(kw => classifier.train(kw, category));
+    }
+    
+    // 2. Train model on user's own pre-categorized historical data
+    rawData.forEach(d => {
+      if (d.Category && d.Category !== 'General' && d.Category !== 'Payment') {
+        classifier.train(d.Description, d.Category);
+      }
+    });
+    
+    // 3. Predict & Clean
     return rawData.map(d => {
-        const smartCat = smartCategorize(d.Description, d.Category);
+        let smartCat = d.Category;
+        // If it's uncategorized, ask the AI to predict based on what it learned
+        if (!smartCat || smartCat === 'General') {
+            const prediction = classifier.predict(d.Description);
+            if (prediction) {
+                smartCat = prediction;
+            } else {
+                smartCat = 'General';
+            }
+        }
+        
         return {
             ...d,
             Category: getCanonicalName(smartCat, knownCategories, 2),
