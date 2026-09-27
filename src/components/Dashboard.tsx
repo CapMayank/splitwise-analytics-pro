@@ -164,13 +164,14 @@ export default function Dashboard() {
   // 2. Monthly Trend Data
   const monthlyTrendData = useMemo(() => {
     const monthMap: Record<string, number> = {};
-    data.filter(d => d.Category !== 'Payment').forEach(d => {
+    data.filter(d => d.Category !== 'Payment' && (selectedGroup === 'All' || d.Group === selectedGroup))
+      .forEach(d => {
       const m = d.Date.substring(0, 7);
       const share = getUserShare(d, selectedUser);
       if (share > 0 || selectedUser === 'All') monthMap[m] = (monthMap[m] || 0) + share;
     });
     return Object.keys(monthMap).sort().map(k => ({ name: k, Total: monthMap[k] }));
-  }, [data, selectedUser]);
+  }, [data, selectedUser, selectedGroup]);
   
   // 3. Cumulative Data
   const dailyCumulativeData = useMemo(() => {
@@ -183,13 +184,16 @@ export default function Dashboard() {
 
   // 4. User Balances
   const userBalances = useMemo(() => {
-    const monthData = data.filter(d => selectedMonth === 'All' || d.Date.startsWith(selectedMonth));
-    return users.map(u => {
+    const monthGroupData = data.filter(d => 
+      (selectedMonth === 'All' || d.Date.startsWith(selectedMonth)) &&
+      (selectedGroup === 'All' || d.Group === selectedGroup)
+    );
+    return dynamicUsers.map(u => {
       let net = 0;
-      monthData.forEach(d => { net += (d.users[u] || 0); });
+      monthGroupData.forEach(d => { net += (d.users[u] || 0); });
       return { name: u.split(' ')[0], NetBalance: net };
-    });
-  }, [data, users, selectedMonth]);
+    }).filter(u => u.NetBalance !== 0);
+  }, [data, dynamicUsers, selectedMonth, selectedGroup]);
 
   // 5. Day of Week Analysis
   const dayOfWeekData = useMemo(() => {
@@ -232,7 +236,7 @@ export default function Dashboard() {
 
   // 7. Group Dynamics (Who paid vs Who consumed)
   const groupDynamics = useMemo(() => {
-      return users.map(u => {
+      return dynamicUsers.map(u => {
           let paidTimes = 0;
           let paidAmount = 0;
           let consumedTimes = 0;
@@ -256,8 +260,8 @@ export default function Dashboard() {
               consumedAmount,
               netRatio: consumedAmount > 0 ? (paidAmount / consumedAmount).toFixed(1) : '0'
           };
-      }).sort((a,b) => b.paidAmount - a.paidAmount);
-  }, [filteredData, users]);
+      }).filter(u => u.paidTimes > 0 || u.consumedTimes > 0).sort((a,b) => b.paidAmount - a.paidAmount);
+  }, [filteredData, dynamicUsers]);
 
 
   const totalExpense = useMemo(() => {
