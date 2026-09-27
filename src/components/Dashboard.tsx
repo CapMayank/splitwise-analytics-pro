@@ -119,6 +119,25 @@ export default function Dashboard() {
     return Array.from(m).sort();
   }, [data]);
 
+  const dynamicUsers = useMemo(() => {
+    const userSet = new Set<string>();
+    data.forEach(d => {
+      if (selectedGroup === 'All' || d.Group === selectedGroup) {
+        Object.keys(d.users).forEach(u => {
+          if (d.users[u] !== 0) userSet.add(u);
+        });
+      }
+    });
+    return Array.from(userSet).sort();
+  }, [data, selectedGroup]);
+
+  // Reset selectedUser if they are not in the new dynamicUsers list
+  React.useEffect(() => {
+    if (selectedUser !== 'All' && !dynamicUsers.includes(selectedUser)) {
+      setSelectedUser('All');
+    }
+  }, [dynamicUsers, selectedUser]);
+
   const filteredData = useMemo(() => {
     return data.filter(d => {
       const monthMatch = selectedMonth === 'All' || d.Date.startsWith(selectedMonth);
@@ -279,7 +298,7 @@ export default function Dashboard() {
             <User size={18} className="text-secondary"/>
             <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}>
               <option value="All">All Users</option>
-              {users.map(u => <option key={u} value={u}>{u}</option>)}
+              {dynamicUsers.map(u => <option key={u} value={u}>{u}</option>)}
             </select>
           </div>
           <div className="flex items-center gap-2">
