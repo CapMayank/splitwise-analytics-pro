@@ -60,15 +60,56 @@ function getCanonicalName(name: string, existingNames: string[], threshold = 2):
 }
 
 const CATEGORY_MAP: Record<string, string[]> = {
-  "Groceries": ["ghee", "milk", "veggies", "vegetable", "grocery", "fruit", "bread", "egg", "butter", "cheese", "meat", "chicken", "mart", "supermarket", "dmart", "reliance fresh", "blinkit", "zepto", "instamart", "swiggy instamart", "bigbasket"],
-  "Dining Out": ["zomato", "swiggy", "restaurant", "cafe", "dinner", "lunch", "breakfast", "pizza", "burger", "coffee", "starbucks", "mcdonalds", "kfc", "subway", "dominos", "food"],
-  "Transportation": ["uber", "ola", "rapido", "cab", "auto", "petrol", "diesel", "fuel", "gas", "bus", "train", "flight", "ticket", "metro", "parking", "flight", "air"],
-  "Entertainment": ["movie", "cinema", "netflix", "prime", "amazon prime", "spotify", "apple music", "concert", "show", "game", "steam"],
-  "Utilities": ["electricity", "water", "gas bill", "internet", "wifi", "broadband", "jio", "airtel", "recharge", "mobile", "phone bill"],
-  "Rent": ["rent", "maintenance", "brokerage", "deposit"],
-  "Medical": ["doctor", "medicine", "pharmacy", "hospital", "clinic", "test", "apollo", "pharmeasy"],
-  "Shopping": ["amazon", "flipkart", "myntra", "ajio", "clothes", "shoes", "zara", "h&m", "ikea"],
-  "Travel": ["hotel", "airbnb", "make my trip", "mmt", "agoda", "booking.com", "goibibo", "trip"]
+  "Groceries": [
+      "ghee", "milk", "veggies", "vegetable", "grocery", "fruit", "bread", "egg", "butter", "cheese", "meat", "chicken", "mart", "supermarket", "dmart", "reliance fresh", "blinkit", "zepto", "instamart", "swiggy instamart", "bigbasket",
+      "paneer", "curd", "yogurt", "rice", "wheat", "atta", "dal", "lentils", "spices", "masala", "oil", "snacks", "chips", "biscuit", "chocolate", "ice cream", "maggi", "noodles", "pasta", 
+      "soap", "shampoo", "detergent", "toothpaste", "brush", "onion", "potato", "tomato", "garlic", "ginger", "coriander", "mint", "fish", "mutton", "beef", "pork", "sausage", "bacon", "frozen", "canned", 
+      "juice", "beverage", "soda", "coke", "pepsi", "water", "tea", "coffee powder", "sugar", "salt", "flour", "baking", "nuts", "dry fruits", "almond", "cashew", "raisin", "walnut", "date", "nature's basket", "spencer"
+  ],
+  "Dining Out": [
+      "zomato", "swiggy", "restaurant", "cafe", "dinner", "lunch", "breakfast", "pizza", "burger", "coffee", "starbucks", "mcdonalds", "kfc", "subway", "dominos", "food",
+      "eat", "eating", "meal", "snack", "bakery", "pastry", "cake", "dessert", "ice cream parlour", "pub", "bar", "drinks", "beer", "wine", "liquor", "alcohol", "cocktail", "mocktail", 
+      "buffet", "barbeque", "bbq", "grill", "dhaba", "street food", "chaat", "momos", "rolls", "shawarma", "biryani", "dosa", "idli", "vada", "thali", "meal prep", "tiffin", "chai", "tea stall", "eatery", "bistro", "diner"
+  ],
+  "Transportation": [
+      "uber", "ola", "rapido", "cab", "auto", "petrol", "diesel", "fuel", "gas", "bus", "train", "flight", "ticket", "metro", "parking", "flight", "air",
+      "toll", "fastag", "commute", "ride", "taxi", "scooter", "bike", "cycle", "yulu", "bounce", "vogo", "car wash", "mechanic", "service", "repair", "spare parts", "tyre", "puncture", 
+      "engine", "oil change", "insurance", "pollution", "puc", "rto", "fine", "challan", "irctc", "redbus", "makemytrip", "indigo", "air india", "spicejet", "vistara"
+  ],
+  "Entertainment": [
+      "movie", "cinema", "netflix", "prime", "amazon prime", "spotify", "apple music", "concert", "show", "game", "steam",
+      "ps4", "ps5", "xbox", "nintendo", "playstation", "theatre", "play", "gig", "standup", "comedy", "club", "entry", "cover charge", "party", "event", "exhibition", "museum", 
+      "zoo", "park", "fair", "fest", "carnival", "arcade", "bowling", "escape room", "paintball", "laser tag", "go karting", "subscription", "hotstar", "disney", "sony liv", "zee5", "voot", "alt balaji", "aha", "sun nxt", "youtube premium"
+  ],
+  "Utilities": [
+      "electricity", "water", "gas bill", "internet", "wifi", "broadband", "jio", "airtel", "recharge", "mobile", "phone bill",
+      "postpaid", "prepaid", "data", "fiber", "dth", "cable", "tata sky", "dish tv", "sun direct", "videocon", "cylinder", "pipeline", "sewer", "trash", "garbage", "waste", "maintenance", "society", "rwa", "bescom", "bwssb", "mahavitaran", "adhn"
+  ],
+  "Rent": [
+      "rent", "maintenance", "brokerage", "deposit", "pg", "hostel", "flat", "apartment", "house", "room", "lease", "advance", "token", "nobroker", "housing.com"
+  ],
+  "Medical": [
+      "doctor", "medicine", "pharmacy", "hospital", "clinic", "test", "apollo", "pharmeasy",
+      "1mg", "netmeds", "practo", "health", "insurance", "premium", "policy", "term plan", "mediclaim", "blood", "scan", "xray", "mri", "ultrasound", "lab", "path", "diagnostic", 
+      "surgery", "operation", "consultation", "fee", "dentist", "eye", "optician", "glasses", "lens", "therapy", "counseling", "psychiatrist", "psychologist", "physiotherapist"
+  ],
+  "Shopping": [
+      "amazon", "flipkart", "myntra", "ajio", "clothes", "shoes", "zara", "h&m", "ikea",
+      "dress", "shirt", "pant", "jeans", "t-shirt", "top", "skirt", "saree", "suit", "kurta", "pyjama", "ethnic", "traditional", "formal", "casual", "winter", "summer", "jacket", "sweater", "coat", 
+      "accessory", "bag", "purse", "wallet", "belt", "tie", "watch", "sunglasses", "jewelry", "ring", "necklace", "earring", "bracelet", "makeup", "cosmetic", "perfume", "deodorant", "skincare", "beauty", "nykaa", "purplle", 
+      "electronics", "phone", "laptop", "tablet", "tv", "camera", "headphone", "earphone", "speaker", "appliance", "fridge", "ac", "cooler", "washing machine", "microwave", "oven", "mixer", "grinder", "blender", "iron", "vacuum", 
+      "furniture", "bed", "sofa", "table", "chair", "wardrobe", "cabinet", "shelf", "decor", "home", "kitchen", "utensil", "pot", "pan", "plate", "bowl", "glass", "cup", "mug", "spoon", "fork", "knife", "croma", "reliance digital", "vijay sales", "apple store"
+  ],
+  "Travel": [
+      "hotel", "airbnb", "make my trip", "mmt", "agoda", "booking.com", "goibibo", "trip",
+      "travel", "tour", "holiday", "vacation", "package", "resort", "stay", "car rental", "zoomcar", "revv", "miles", "passport", "visa", "currency", "forex", "roaming", "guide", "monument", "souvenir", "cleartrip", "yatra", "expedia", "trivago"
+  ],
+  "Personal Care": [
+      "haircut", "salon", "parlor", "barber", "shave", "facial", "manicure", "pedicure", "wax", "threading", "bleach", "hair color", "spa", "massage", "urban company", "urban clap"
+  ],
+  "Education": [
+      "school", "college", "tuition", "fee", "book", "notebook", "pen", "pencil", "stationery", "course", "udemy", "coursera", "edx", "class", "workshop", "seminar", "exam", "form", "admission", "byjus", "unacademy", "vedantu", "upgrad", "simplilearn"
+  ]
 };
 
 function smartCategorize(description: string, currentCategory: string): string {
