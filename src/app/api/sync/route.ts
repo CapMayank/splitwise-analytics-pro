@@ -9,16 +9,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Token is required' }, { status: 400 });
     }
 
-    const isCookie = token.includes('_splitwise_session') || token.includes('=');
+    let finalToken = token.trim();
     const headers: Record<string, string> = {
       'Accept': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Referer': 'https://secure.splitwise.com/'
     };
 
-    if (isCookie) {
-      headers['Cookie'] = token;
+    if (finalToken.includes('Bearer ')) {
+      headers['Authorization'] = finalToken;
+    } else if (finalToken.includes('_splitwise_session=')) {
+      headers['Cookie'] = finalToken;
+    } else if (finalToken.length > 50 && !finalToken.includes('=')) {
+      // User probably pasted the raw value of _splitwise_session from a cookie editor
+      headers['Cookie'] = `_splitwise_session=${finalToken}`;
     } else {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers['Authorization'] = `Bearer ${finalToken}`;
     }
 
     // Fetch expenses
