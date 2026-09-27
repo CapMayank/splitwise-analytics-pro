@@ -30,6 +30,12 @@ export default function Dashboard() {
   const [selectedUser, setSelectedUser] = useState<string>('All');
   const [selectedMonth, setSelectedMonth] = useState<string>('All');
   const [selectedGroup, setSelectedGroup] = useState<string>('All');
+  
+  // Drill-down filters
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedDay, setSelectedDay] = useState<string>('All');
+  const [selectedSize, setSelectedSize] = useState<string>('All');
+  
   const [activeTab, setActiveTab] = useState<'overview' | 'insights'>('overview');
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -164,10 +170,24 @@ export default function Dashboard() {
         userMatch = d.users[selectedUser] !== 0; 
       }
       const groupMatch = selectedGroup === 'All' || d.Group === selectedGroup;
+      const categoryMatch = selectedCategory === 'All' || d.Category === selectedCategory;
+      
+      const dateObj = new Date(d.Date);
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const dayMatch = selectedDay === 'All' || (!isNaN(dateObj.getTime()) && days[dateObj.getDay()] === selectedDay);
+      
+      let sizeMatch = true;
+      if (selectedSize !== 'All') {
+          const share = getUserShare(d, selectedUser);
+          if (selectedSize === 'Small (<₹300)') sizeMatch = share > 0 && share < 300;
+          else if (selectedSize === 'Medium (₹300-₹1k)') sizeMatch = share >= 300 && share <= 1000;
+          else if (selectedSize === 'Large (>₹1k)') sizeMatch = share > 1000;
+      }
+
       const isNotPayment = d.Category !== 'Payment';
-      return monthMatch && userMatch && groupMatch && isNotPayment;
+      return monthMatch && userMatch && groupMatch && categoryMatch && dayMatch && sizeMatch && isNotPayment;
     });
-  }, [data, selectedMonth, selectedUser, selectedGroup]);
+  }, [data, selectedMonth, selectedUser, selectedGroup, selectedCategory, selectedDay, selectedSize]);
 
   // 1. Category Data
   const categoryData = useMemo(() => {
@@ -401,6 +421,31 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Active Drill-down Filters */}
+      {(selectedCategory !== 'All' || selectedDay !== 'All' || selectedSize !== 'All') && (
+          <div className="flex gap-2 animate-in mb-4 mt-4" style={{ flexWrap: 'wrap' }}>
+              <span className="text-secondary" style={{ fontSize: '13px', alignSelf: 'center' }}>Active Drill-down Filters:</span>
+              {selectedCategory !== 'All' && (
+                  <button className="badge badge-neutral flex items-center gap-1" onClick={() => setSelectedCategory('All')} style={{ cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      Category: {selectedCategory} ✕
+                  </button>
+              )}
+              {selectedDay !== 'All' && (
+                  <button className="badge badge-neutral flex items-center gap-1" onClick={() => setSelectedDay('All')} style={{ cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      Day: {selectedDay} ✕
+                  </button>
+              )}
+              {selectedSize !== 'All' && (
+                  <button className="badge badge-neutral flex items-center gap-1" onClick={() => setSelectedSize('All')} style={{ cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      Size: {selectedSize} ✕
+                  </button>
+              )}
+              <button className="text-secondary" onClick={() => { setSelectedCategory('All'); setSelectedDay('All'); setSelectedSize('All'); }} style={{ fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto', textDecoration: 'underline' }}>
+                  Clear All
+              </button>
+          </div>
+      )}
+
       {/* ==== OVERVIEW TAB ==== */}
       {activeTab === 'overview' && (
           <>
@@ -422,6 +467,8 @@ export default function Dashboard() {
                         paddingAngle={4}
                         dataKey="value"
                         stroke="none"
+                        onClick={(data: any) => { if (data?.name) setSelectedCategory(data.name); }}
+                        style={{ cursor: 'pointer' }}
                         label={({ name, percent }: any) => `${name?.substring(0, 10)} ${(percent * 100).toFixed(0)}%`}
                         >
                         {categoryData.map((entry, index) => (
@@ -484,7 +531,7 @@ export default function Dashboard() {
                         contentStyle={{ backgroundColor: 'rgba(30, 30, 30, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                         cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                         />
-                        <Bar dataKey="Total" fill="var(--accent-1)" radius={[6, 6, 0, 0]} />
+                        <Bar dataKey="Total" fill="var(--accent-1)" radius={[6, 6, 0, 0]} onClick={(data: any) => { if (data?.name) setSelectedMonth(data.name); }} style={{ cursor: 'pointer' }} />
                     </BarChart>
                     </ResponsiveContainer>
                 </div>
@@ -507,7 +554,7 @@ export default function Dashboard() {
                             cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                             />
                             <ReferenceLine x={0} stroke="rgba(255,255,255,0.2)" />
-                            <Bar dataKey="NetBalance" radius={[0, 6, 6, 0]}>
+                            <Bar dataKey="NetBalance" radius={[0, 6, 6, 0]} onClick={(data: any) => { if (data?.name) setSelectedUser(data.name); }} style={{ cursor: 'pointer' }}>
                             {userBalances.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.NetBalance >= 0 ? 'var(--positive)' : 'var(--negative)'} />
                             ))}
@@ -580,7 +627,7 @@ export default function Dashboard() {
                                     contentStyle={{ backgroundColor: 'rgba(30, 30, 30, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                 />
-                                <Bar dataKey="Total" radius={[6, 6, 0, 0]}>
+                                <Bar dataKey="Total" radius={[6, 6, 0, 0]} onClick={(data: any) => { if (data?.day) setSelectedDay(data.day); else if (data?.payload?.day) setSelectedDay(data.payload.day); }} style={{ cursor: 'pointer' }}>
                                     {dayOfWeekData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={DAY_COLORS[index % DAY_COLORS.length]} />
                                     ))}
@@ -608,6 +655,8 @@ export default function Dashboard() {
                                 paddingAngle={4}
                                 dataKey="value"
                                 stroke="none"
+                                onClick={(data: any) => { if (data?.name) setSelectedSize(data.name); }}
+                                style={{ cursor: 'pointer' }}
                                 label={({ name, percent }: any) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                             >
                             {sizeDistribution.map((entry, index) => (
