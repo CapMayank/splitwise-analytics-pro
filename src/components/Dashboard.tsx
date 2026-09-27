@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import Papa from 'papaparse';
-import { UploadCloud, PieChart as PieChartIcon, BarChart as BarChartIcon, User, Users, Calendar, TrendingUp, AlertCircle, Clock, LayoutDashboard, Lightbulb, RefreshCw } from 'lucide-react';
+import { UploadCloud, PieChart as PieChartIcon, BarChart as BarChartIcon, User, Users, Calendar, TrendingUp, AlertCircle, Clock, LayoutDashboard, Lightbulb, RefreshCw, Sparkles, Repeat } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine,
@@ -310,6 +310,91 @@ export default function Dashboard() {
       return [...filteredData].sort((a, b) => getUserShare(b, selectedUser) - getUserShare(a, selectedUser)).slice(0, 10);
   }, [filteredData, selectedUser]);
 
+  // 8. Recurring Expenses
+  const recurringExpenses = useMemo(() => {
+      const groupMap: Record<string, { count: number, total: number, lastDate: string, cost: number }> = {};
+      
+      const baseData = data.filter(d => 
+          (selectedGroup === 'All' || d.Group === selectedGroup) &&
+          d.Category !== 'Payment'
+      );
+
+      baseData.forEach(d => {
+          const share = getUserShare(d, selectedUser);
+          if (share === 0) return;
+          const key = `${d.Description.trim().toLowerCase()}|${d.Category}`;
+          if (!groupMap[key]) {
+              groupMap[key] = { count: 0, total: 0, lastDate: d.Date, cost: share };
+          }
+          groupMap[key].count++;
+          groupMap[key].total += share;
+          if (new Date(d.Date) > new Date(groupMap[key].lastDate)) {
+              groupMap[key].lastDate = d.Date;
+              groupMap[key].cost = share;
+          }
+      });
+
+      return Object.keys(groupMap)
+          .map(k => ({
+              description: k.split('|')[0].replace(/\b\w/g, l => l.toUpperCase()),
+              category: k.split('|')[1],
+              count: groupMap[k].count,
+              projectedCost: groupMap[k].cost,
+              lastDate: groupMap[k].lastDate
+          }))
+          .filter(x => x.count >= 2)
+          .sort((a,b) => b.projectedCost - a.projectedCost);
+  }, [data, selectedGroup, selectedUser]);
+
+  // 9. Smart Insights
+  const smartInsights = useMemo(() => {
+      const insights: string[] = [];
+      if (filteredData.length === 0) return ["Not enough data to generate insights."];
+      
+      if (categoryData.length > 0) {
+          const topCat = categoryData[0];
+          const pct = ((topCat.value / totalExpense) * 100).toFixed(0);
+          insights.push(`Your biggest spending trap is **${topCat.name}**, eating up **${pct}%** (₹${topCat.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}) of your selected expenses.`);
+      }
+
+      let weekendSpend = 0;
+      let weekdaySpend = 0;
+      dayOfWeekData.forEach(d => {
+          if (d.day === 'Sat' || d.day === 'Sun') weekendSpend += d.Total;
+          else weekdaySpend += d.Total;
+      });
+      const isWeekendWarrior = weekendSpend > (weekdaySpend * 0.4);
+      if (isWeekendWarrior) {
+          insights.push(`You're a weekend warrior! You spend a disproportionate amount (₹${weekendSpend.toLocaleString('en-IN', { maximumFractionDigits: 0 })}) on Saturdays and Sundays.`);
+      }
+
+      const recurringTotal = recurringExpenses.reduce((acc, r) => acc + r.projectedCost, 0);
+      if (recurringExpenses.length > 0) {
+          insights.push(`We found **${recurringExpenses.length} recurring subscriptions/bills**. You're locked into spending at least **₹${recurringTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}** per month before buying anything else.`);
+      }
+
+      if (selectedUser !== 'All' && groupDynamics.length > 0) {
+          const myDynamic = groupDynamics.find(g => g.name === selectedUser);
+          if (myDynamic && myDynamic.netRatio !== '0') {
+              const r = parseFloat(myDynamic.netRatio);
+              if (r > 1.2) {
+                  insights.push(`You are fronting the bill! You pay for things **${r}x** more often than you consume them.`);
+              } else if (r < 0.8) {
+                  insights.push(`You owe big time. You've been consuming way more than you've been paying upfront.`);
+              }
+          }
+      } else if (selectedUser === 'All') {
+          if (userBalances.length > 0) {
+              const owesMost = [...userBalances].sort((a,b) => a.NetBalance - b.NetBalance)[0];
+              if (owesMost.NetBalance < 0) {
+                  insights.push(`**${owesMost.name}** is currently carrying the highest debt in this group (₹${Math.abs(owesMost.NetBalance).toLocaleString('en-IN', { maximumFractionDigits: 0 })}).`);
+              }
+          }
+      }
+
+      return insights;
+  }, [filteredData, categoryData, totalExpense, dayOfWeekData, recurringExpenses, groupDynamics, selectedUser, userBalances]);
+
 
   if (data.length === 0) {
     return (
@@ -609,6 +694,63 @@ export default function Dashboard() {
       {/* ==== INSIGHTS TAB ==== */}
       {activeTab === 'insights' && (
           <>
+            <div className="grid grid-cols-2 animate-in delay-2 mb-6">
+                {/* Smart Insights AI */}
+                <div className="glass-panel" style={{ background: 'rgba(10, 132, 255, 0.05)', borderColor: 'rgba(10, 132, 255, 0.2)' }}>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Sparkles color="var(--accent-1)" size={20} />
+                        <h3 style={{ fontSize: '18px', color: 'var(--accent-1)' }}>Smart Insights</h3>
+                    </div>
+                    <div className="flex flex-col gap-4">
+                        {smartInsights.map((insight, idx) => {
+                            const parts = insight.split(/\*\*(.*?)\*\*/g);
+                            return (
+                                <div key={idx} style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '12px', fontSize: '14.5px', lineHeight: '1.5' }}>
+                                    {parts.map((part, i) => i % 2 === 1 ? <strong key={i} style={{ color: '#fff' }}>{part}</strong> : part)}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Recurring Expenses */}
+                <div className="glass-panel">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Repeat color="var(--accent-2)" size={20} />
+                        <h3 style={{ fontSize: '18px' }}>Detected Subscriptions & Bills</h3>
+                    </div>
+                    <div className="table-wrapper" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                        {recurringExpenses.length > 0 ? (
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th>Expense</th>
+                                    <th>Freq</th>
+                                    <th>Est. Monthly</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {recurringExpenses.slice(0, 10).map((r, i) => (
+                                    <tr key={i}>
+                                        <td>
+                                            <div style={{ fontWeight: 500 }}>{r.description}</div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{r.category}</div>
+                                        </td>
+                                        <td><span className="badge badge-neutral">{r.count}x</span></td>
+                                        <td style={{ color: 'var(--negative)' }}>₹{r.projectedCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                                No recurring expenses detected.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
             <div className="grid grid-cols-2 animate-in delay-3">
                 {/* Day of Week Radar */}
                 <div className="glass-panel">
