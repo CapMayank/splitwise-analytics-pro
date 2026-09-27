@@ -9,6 +9,68 @@ import {
   AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
 
+function getLevenshteinDistance(a: string, b: string): number {
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+function getCanonicalName(name: string, existingNames: string[], threshold = 2): string {
+    if (!name) return 'Unknown';
+    const cleanName = name.trim();
+    const lowerName = cleanName.toLowerCase();
+    
+    // 1. Exact match (case insensitive)
+    const exactMatch = existingNames.find(n => n.toLowerCase() === lowerName);
+    if (exactMatch) return exactMatch;
+
+    // 2. Substring or similar pattern
+    const subMatch = existingNames.find(n => {
+        const ln = n.toLowerCase();
+        return (ln.includes(lowerName) || lowerName.includes(ln)) && Math.abs(ln.length - lowerName.length) <= 5;
+    });
+    if (subMatch) return subMatch;
+
+    // 3. Fuzzy match (Levenshtein distance)
+    for (const existing of existingNames) {
+        if (existing.length < 4 || cleanName.length < 4) continue;
+        const dist = getLevenshteinDistance(lowerName, existing.toLowerCase());
+        if (dist <= threshold) {
+            return existing;
+        }
+    }
+    
+    existingNames.push(cleanName);
+    return cleanName;
+}
+
+const cleanData = (rawData: any[]) => {
+    const knownCategories: string[] = [];
+    const knownDescriptions: string[] = [];
+    
+    return rawData.map(d => ({
+        ...d,
+        Category: getCanonicalName(d.Category, knownCategories, 2),
+        Description: getCanonicalName(d.Description, knownDescriptions, 2)
+    }));
+};
+
+
 type Transaction = {
   Date: string;
   Description: string;
@@ -68,7 +130,9 @@ export default function Dashboard() {
       
       setUsers(result.users);
       if (result.groups) setGroups(result.groups);
-      setData(result.data.sort((a: any, b: any) => new Date(a.Date).getTime() - new Date(b.Date).getTime()));
+      
+      const cleanedData = cleanData(result.data);
+      setData(cleanedData.sort((a: any, b: any) => new Date(a.Date).getTime() - new Date(b.Date).getTime()));
     } catch (err: any) {
       alert("Error connecting to API: " + err.message);
     } finally {
@@ -121,7 +185,9 @@ export default function Dashboard() {
         setUsers(userList);
         setGroups([]); // CSVs usually don't have multiple groups identified easily
         setSelectedGroup('All');
-        setData(parsedData.sort((a,b) => new Date(a.Date).getTime() - new Date(b.Date).getTime()));
+        
+        const cleanedData = cleanData(parsedData);
+        setData(cleanedData.sort((a,b) => new Date(a.Date).getTime() - new Date(b.Date).getTime()));
       }
     });
   };
